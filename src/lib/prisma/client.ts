@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaNeon } from "@prisma/adapter-neon";
+import { PrismaNeonHttp } from "@prisma/adapter-neon";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -7,7 +7,8 @@ const globalForPrisma = globalThis as unknown as {
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL ?? "postgresql://postgres:password@localhost:5432/prospectai";
-  const adapter = new PrismaNeon({ connectionString });
+  // HTTP mode — sin WebSockets, compatible 100% con Vercel serverless
+  const adapter = new PrismaNeonHttp(connectionString, {});
   return new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
