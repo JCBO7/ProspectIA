@@ -172,7 +172,6 @@ export function GeneradorMensaje({ prospecto, onClose, onGuardado }: Props) {
 
   const tieneEmail = !!prospecto.email;
   const tieneTelefono = !!prospecto.telefono;
-  const tieneTwilio = true;
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -392,25 +391,14 @@ export function GeneradorMensaje({ prospecto, onClose, onGuardado }: Props) {
 
                 {/* WHATSAPP */}
                 {canal === "WHATSAPP" && (
-                  <div className="space-y-2">
-                    <button
-                      onClick={abrirWhatsAppWeb}
-                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2.5 rounded-lg transition-all"
-                    >
-                      <MessageCircle size={15} /><ExternalLink size={12} />
-                      Abrir WhatsApp Web {tieneTelefono ? `(${prospecto.telefono})` : ""}
-                    </button>
-                    {tieneTelefono && tieneTwilio && (
-                      <button
-                        onClick={enviarAPI}
-                        disabled={enviando || enviado}
-                        className="w-full flex items-center justify-center gap-2 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 text-sm py-2 rounded-lg transition-all disabled:opacity-50"
-                      >
-                        {enviando ? <Loader2 size={14} className="animate-spin" /> : enviado ? <Check size={14} /> : <Send size={14} />}
-                        {enviado ? "¡Enviado!" : "Enviar via API (Twilio)"}
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    onClick={abrirWhatsAppWeb}
+                    disabled={!tieneTelefono}
+                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg transition-all"
+                  >
+                    <MessageCircle size={15} /><ExternalLink size={12} />
+                    {tieneTelefono ? `Abrir WhatsApp Web (${prospecto.telefono})` : "Sin teléfono registrado"}
+                  </button>
                 )}
 
                 {/* SMS */}

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import {
   X, Zap, Trash2, Loader2, Send, Check,
-  AlertCircle, BookOpen, ChevronRight,
+  AlertCircle, BookOpen, ChevronRight, ExternalLink, MessageCircle,
 } from "lucide-react";
 import type { ProspectoData } from "@/types";
 
@@ -37,6 +37,7 @@ export function SelectorPlantilla({ prospectos, onClose }: Props) {
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<{ enviados: number; errores: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [listaWAManual, setListaWAManual] = useState<Array<{ empresa: string; numero: string; url: string }>>([]);
 
   const esMasivo = prospectos.length > 1;
   const prospecto = prospectos[0];
@@ -63,6 +64,7 @@ export function SelectorPlantilla({ prospectos, onClose }: Props) {
     setAsuntoEditado(p.asunto ?? "");
     setError(null);
     setResultado(null);
+    setListaWAManual([]);
   }
 
   async function eliminar(id: string, e: React.MouseEvent) {
@@ -93,6 +95,30 @@ export function SelectorPlantilla({ prospectos, onClose }: Props) {
         return;
       }
       abrirWhatsApp();
+      return;
+    }
+
+    // Masivo WhatsApp → generar links wa.me para envío manual (Twilio no conectado)
+    if (esMasivo && seleccionada.canal === "WHATSAPP") {
+      const lista = prospectos
+        .filter((p) => !!p.telefono)
+        .map((p) => {
+          const texto = mensajeEditado
+            .replace(/\[NOMBRE\]/gi, p.contacto ?? p.empresa)
+            .replace(/\[EMPRESA\]/gi, p.empresa)
+            .replace(/\[GIRO\]/gi, p.giro ?? "su empresa")
+            .replace(/\[ZONA\]/gi, p.zona ?? p.ciudad ?? "su ciudad");
+          const digits = (p.telefono ?? "").replace(/\D/g, "");
+          const numero = digits.startsWith("52") ? digits : `52${digits}`;
+          return {
+            empresa: p.empresa,
+            numero: p.telefono ?? "",
+            url: `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`,
+          };
+        });
+      fetch(`/api/plantillas/${seleccionada.id}`, { method: "PATCH" });
+      setListaWAManual(lista);
+      setResultado({ enviados: lista.length, errores: prospectos.filter((p) => !p.telefono).length });
       return;
     }
 
@@ -322,6 +348,33 @@ export function SelectorPlantilla({ prospectos, onClose }: Props) {
 
                 {/* Resultado */}
                 {resultado ? (
+                  listaWAManual.length > 0 ? (
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 space-y-2">
+                      <p className="text-sm text-emerald-300 font-medium flex items-center gap-2">
+                        <MessageCircle size={14} />
+                        Abre WhatsApp manualmente para cada prospecto:
+                      </p>
+                      <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                        {listaWAManual.map((item) => (
+                          <a
+                            key={item.url}
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all"
+                          >
+                            <span className="text-xs text-white font-medium truncate">{item.empresa}</span>
+                            <span className="flex items-center gap-1 text-emerald-400 text-xs shrink-0">
+                              {item.numero} <ExternalLink size={10} />
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                      {resultado.errores > 0 && (
+                        <p className="text-xs text-red-400">{resultado.errores} sin teléfono registrado</p>
+                      )}
+                    </div>
+                  ) : (
                   <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex items-center gap-3">
                     <Check size={18} className="text-emerald-400 shrink-0" />
                     <div>
@@ -333,38 +386,36 @@ export function SelectorPlantilla({ prospectos, onClose }: Props) {
                       )}
                     </div>
                   </div>
+                  )
                 ) : (
-                  {(() => {
-                    const esWA = !esMasivo && seleccionada.canal === "WHATSAPP";
-                    return (
-                      <button
-                        onClick={enviar}
-                        disabled={enviando || (esWA && !prospecto?.telefono)}
-                        className={`w-full flex items-center justify-center gap-2 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition-all text-sm ${
-                          esWA
-                            ? "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400"
-                            : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400"
-                        }`}
-                      >
-                        {enviando ? (
-                          <Loader2 size={15} className="animate-spin" />
-                        ) : esWA ? (
-                          <span className="text-base leading-none">💬</span>
-                        ) : (
-                          <Send size={15} />
-                        )}
-                        {enviando
-                          ? "Abriendo..."
-                          : esWA
-                          ? prospecto?.telefono
-                            ? `Abrir WhatsApp · ${prospecto.telefono}`
-                            : "Sin teléfono"
-                          : esMasivo
-                          ? `Enviar a ${prospectos.filter((p) => seleccionada.canal === "EMAIL" ? !!p.email : !!p.telefono).length} prospectos`
-                          : "Enviar ahora"}
-                      </button>
-                    );
-                  })()}
+                  <button
+                    onClick={enviar}
+                    disabled={enviando || (!esMasivo && seleccionada.canal === "WHATSAPP" && !prospecto?.telefono)}
+                    className={`w-full flex items-center justify-center gap-2 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition-all text-sm ${
+                      seleccionada.canal === "WHATSAPP"
+                        ? "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400"
+                        : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400"
+                    }`}
+                  >
+                    {enviando ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : seleccionada.canal === "WHATSAPP" ? (
+                      <span className="text-base leading-none">💬</span>
+                    ) : (
+                      <Send size={15} />
+                    )}
+                    {enviando
+                      ? "Abriendo..."
+                      : !esMasivo && seleccionada.canal === "WHATSAPP"
+                      ? prospecto?.telefono
+                        ? `Abrir WhatsApp · ${prospecto.telefono}`
+                        : "Sin teléfono"
+                      : esMasivo && seleccionada.canal === "WHATSAPP"
+                      ? `Abrir WhatsApp Web · ${prospectos.filter((p) => !!p.telefono).length} prospectos`
+                      : esMasivo
+                      ? `Enviar a ${prospectos.filter((p) => seleccionada.canal === "EMAIL" ? !!p.email : !!p.telefono).length} prospectos`
+                      : "Enviar ahora"}
+                  </button>
                 )}
 
                 {error && (
