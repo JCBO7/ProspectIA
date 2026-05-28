@@ -4,6 +4,12 @@ import { prisma } from "@/lib/prisma/client";
 
 export async function POST(req: Request) {
   try {
+    const dbUrl = process.env.DATABASE_URL ?? "";
+    const firstCharCode = dbUrl.charCodeAt(0);
+    if (firstCharCode === 0xFEFF || firstCharCode === 65279) {
+      return NextResponse.json({ error: `BOM detectado: primer char=${firstCharCode}, url_start=${dbUrl.substring(0, 15)}` }, { status: 500 });
+    }
+
     const { name, email, password } = await req.json();
 
     if (!email || !password || password.length < 8) {
