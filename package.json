@@ -4,23 +4,53 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:seed": "ts-node prisma/seed.ts",
+    "docker:up": "docker-compose up -d postgres redis",
+    "docker:down": "docker-compose down"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.97.1",
+    "@auth/prisma-adapter": "^2.11.2",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@tanstack/react-query": "^5.100.11",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^8.0.0",
+    "@types/pg": "^8.20.0",
+    "axios": "^1.16.1",
+    "bcryptjs": "^3.0.3",
+    "bull": "^4.16.5",
+    "csv-writer": "^1.6.0",
+    "ioredis": "^5.10.1",
+    "lucide-react": "^1.16.0",
+    "next": "14.2.35",
+    "next-auth": "^4.24.14",
+    "nodemailer": "^8.0.9",
+    "pg": "^8.21.0",
     "react": "^18",
     "react-dom": "^18",
-    "next": "14.2.35"
+    "resend": "^6.12.3",
+    "twilio": "^6.0.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@types/bull": "^3.15.9",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10.5.0",
     "eslint": "^8",
-    "eslint-config-next": "14.2.35"
+    "eslint-config-next": "14.2.35",
+    "postcss": "^8",
+    "prisma": "^7.8.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
 }
