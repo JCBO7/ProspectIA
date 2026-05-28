@@ -62,9 +62,6 @@ export async function POST(req: Request) {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("Error generando mensaje:", msg);
-    return NextResponse.json(
-      { error: process.env.NODE_ENV === "development" ? msg : "Error generando mensaje con IA" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
