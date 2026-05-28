@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { PrismaNeon } from "@prisma/adapter-neon";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -8,13 +7,7 @@ const globalForPrisma = globalThis as unknown as {
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL ?? "postgresql://postgres:password@localhost:5432/prospectai";
-  const pool = new Pool({
-    connectionString,
-    ssl: connectionString.includes("neon.tech") || connectionString.includes("sslmode=require")
-      ? { rejectUnauthorized: false }
-      : false,
-  });
-  const adapter = new PrismaPg(pool);
+  const adapter = new PrismaNeon({ connectionString });
   return new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
