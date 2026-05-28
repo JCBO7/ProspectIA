@@ -93,7 +93,7 @@ async function queryOverpass(query: string): Promise<OSMNode[]> {
     try {
       const res = await axios.get(url, {
         params: { data: query },
-        headers: { "User-Agent": "ProspectAI/1.0 (contacto@prospectai.mx)" },
+        headers: { "User-Agent": "JC-ProspectAI/1.0 (contacto@prospectai.mx)" },
         timeout: 25000,
       });
       return res.data?.elements ?? [];

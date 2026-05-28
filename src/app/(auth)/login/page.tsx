@@ -50,7 +50,7 @@ export default function LoginPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-900/40">
               <Zap size={20} className="text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">ProspectAI</span>
+            <span className="text-2xl font-bold text-white">JC ProspectAI</span>
           </div>
           <h1 className="text-xl font-bold text-white">Iniciar sesión</h1>
           <p className="text-gray-500 text-sm mt-1">Motor de prospección B2B con IA</p>

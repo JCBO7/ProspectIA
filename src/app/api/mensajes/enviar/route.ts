@@ -36,7 +36,7 @@ async function enviarEmailSMTP(params: {
   const from = process.env.SMTP_FROM ?? process.env.GMAIL_USER ?? "prospectai@gmail.com";
 
   await transporter.sendMail({
-    from: `ProspectAI <${from}>`,
+    from: `JC ProspectAI <${from}>`,
     to: params.to,
     subject: params.subject,
     html: params.html,
@@ -54,7 +54,7 @@ async function enviarEmailResend(params: {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   const { error } = await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? "ProspectAI <noreply@resend.dev>",
+    from: process.env.EMAIL_FROM ?? "JC ProspectAI <noreply@resend.dev>",
     to: params.to,
     subject: params.subject,
     html: params.html,

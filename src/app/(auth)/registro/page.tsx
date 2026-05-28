@@ -40,7 +40,7 @@ export default function RegistroPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-900/40">
               <Zap size={20} className="text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">ProspectAI</span>
+            <span className="text-2xl font-bold text-white">JC ProspectAI</span>
           </div>
           <h1 className="text-xl font-bold text-white">Crear cuenta gratis</h1>
           <p className="text-gray-500 text-sm mt-1">50 prospectos/mes sin costo</p>

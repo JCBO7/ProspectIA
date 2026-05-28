@@ -51,7 +51,7 @@ export async function POST(req: Request) {
         try {
           const htmlMensaje = mensajePersonalizado.replace(/\n/g, "<br>");
           const { error } = await resend.emails.send({
-            from: process.env.EMAIL_FROM ?? "ProspectAI <noreply@resend.dev>",
+            from: process.env.EMAIL_FROM ?? "JC ProspectAI <noreply@resend.dev>",
             to: p.email,
             subject: (asunto ?? "Propuesta para [EMPRESA]")
               .replace(/\[EMPRESA\]/gi, p.empresa),

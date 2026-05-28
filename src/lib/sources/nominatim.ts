@@ -25,7 +25,7 @@ export async function geocodificar(query: string, countryCode = "mx"): Promise<{
         limit: 1,
         addressdetails: 1,
       },
-      headers: { "User-Agent": "ProspectAI/1.0 (prospecting-app)" },
+      headers: { "User-Agent": "JC-ProspectAI/1.0 (prospecting-app)" },
       timeout: 8000,
     });
 

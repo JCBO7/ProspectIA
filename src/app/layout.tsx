@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "ProspectAI - Motor de Prospección B2B",
+  title: "JC ProspectAI - Motor de Prospección B2B",
   description: "Encuentra clientes, genera mensajes personalizados y lanza campañas de outreach multicanal con IA.",
 };
 

@@ -30,7 +30,7 @@ export function Sidebar({ user }: SidebarProps) {
             <Zap size={16} className="text-white" />
           </div>
           <div>
-            <span className="font-bold text-white tracking-tight">ProspectAI</span>
+            <span className="font-bold text-white tracking-tight">JC ProspectAI</span>
             <div className="text-[10px] text-gray-500 -mt-0.5">Motor de Prospección</div>
           </div>
         </div>
