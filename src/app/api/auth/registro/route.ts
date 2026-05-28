@@ -31,7 +31,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
-    console.error("Error en registro:", error);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Error en registro:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
