@@ -2,6 +2,7 @@
  * Motor de búsqueda unificado — agrega OSM + DENUE + Google Places + Hunter.io
  * Siempre devuelve datos reales, sin mocks.
  */
+import { scorearProspecto } from "@/lib/claude/client";
 import { buscarEnOSM, ESTADO_CENTROS, OSM_TAGS_COMUNES } from "@/lib/sources/osm";
 import { buscarPorEstado, mapEstratoATamano, ESTADOS_MEXICO } from "@/lib/denue/client";
 import { buscarEnGooglePlaces } from "@/lib/sources/google-places";
@@ -230,11 +231,40 @@ export async function buscarProspectos(params: SearchParams): Promise<SearchResu
     })
   );
 
-  // ─── 6. Scorear por completitud de datos ─────────────────────────────────
-  const conScore = enriquecidos
-    .map((p) => ({ ...p, score: p.score || scoreCompletitud(p) }))
+  // ─── 6. Scorear: Claude para top 5, completitud para el resto ────────────
+  // Pre-ordenar: primero los que tienen teléfono Y email (más accionables)
+  const ordenadosPorContacto = [...enriquecidos].sort((a, b) => tierContacto(b) - tierContacto(a));
+
+  const [paraScore, sinScore] = [
+    ordenadosPorContacto.slice(0, 5),
+    ordenadosPorContacto.slice(5),
+  ];
+
+  const scored = await Promise.all(
+    paraScore.map(async (p) => {
+      try {
+        const { score, razonamiento } = await scorearProspecto(
+          { empresa: p.empresa, giro: p.giro, tamano: p.tamano, zona: p.zona,
+            telefono: p.telefono, email: p.email, website: p.website },
+          descripcionNegocio
+        );
+        return { ...p, score, metadata: { ...(p.metadata as object), razonamientoScore: razonamiento } };
+      } catch {
+        return { ...p, score: scoreCompletitud(p) };
+      }
+    })
+  );
+
+  const rest = sinScore.map((p) => ({ ...p, score: p.score || scoreCompletitud(p) }));
+
+  // Orden final: primero por tier de contacto (teléfono+email > uno > ninguno), luego por score
+  const conScore = [...scored, ...rest]
     .filter((p) => (p.score ?? 0) >= 15)
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    .sort((a, b) => {
+      const tierDiff = tierContacto(b) - tierContacto(a);
+      if (tierDiff !== 0) return tierDiff;
+      return (b.score ?? 0) - (a.score ?? 0);
+    });
 
   return {
     prospectos: conScore,
@@ -322,7 +352,13 @@ function inferirTagsOSM(descripcion: string): Array<{ key: string; value: string
   ];
 }
 
-// Score basado en completitud de datos — reemplaza el flat 50 para prospectos sin score IA
+// Tier de contacto: 2 = teléfono+email, 1 = solo uno, 0 = ninguno
+function tierContacto(p: ProspectoData): number {
+  const t = p.telefono ? 1 : 0;
+  const e = p.email ? 1 : 0;
+  return t + e; // 0, 1 o 2
+}
+
 function scoreCompletitud(p: ProspectoData): number {
   let score = 25; // base mínima
   if (p.telefono) score += 20;
