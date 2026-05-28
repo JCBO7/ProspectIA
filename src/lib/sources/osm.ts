@@ -104,7 +104,7 @@ async function queryOverpass(query: string): Promise<OSMNode[]> {
   return [];
 }
 
-function mapOSMToProspecto(el: OSMNode, estadoCodigo: string): ProspectoData | null {
+function mapOSMToProspecto(el: OSMNode, _estadoCodigo: string): ProspectoData | null {
   const tags = el.tags ?? {};
   const nombre = tags.name;
   if (!nombre) return null;

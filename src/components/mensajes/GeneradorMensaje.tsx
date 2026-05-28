@@ -172,7 +172,6 @@ export function GeneradorMensaje({ prospecto, onClose, onGuardado }: Props) {
 
   const tieneEmail = !!prospecto.email;
   const tieneTelefono = !!prospecto.telefono;
-  const tieneResend = true; // La verificación real la hace el endpoint
   const tieneTwilio = true;
 
   return (
