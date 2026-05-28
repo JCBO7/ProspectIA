@@ -72,8 +72,30 @@ export function SelectorPlantilla({ prospectos, onClose }: Props) {
     if (seleccionada?.id === id) setSeleccionada(null);
   }
 
+  function abrirWhatsApp() {
+    if (!seleccionada || !prospecto?.telefono) return;
+    // Limpiar número: solo dígitos, agregar 52 si no tiene código de país
+    const digits = prospecto.telefono.replace(/\D/g, "");
+    const numero = digits.startsWith("52") ? digits : `52${digits}`;
+    const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensajeEditado)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+    fetch(`/api/plantillas/${seleccionada.id}`, { method: "PATCH" });
+    setResultado({ enviados: 1, errores: 0 });
+  }
+
   async function enviar() {
     if (!seleccionada) return;
+
+    // WhatsApp individual → abrir wa.me directamente (sin Twilio)
+    if (!esMasivo && seleccionada.canal === "WHATSAPP") {
+      if (!prospecto?.telefono) {
+        setError("Este prospecto no tiene número de teléfono");
+        return;
+      }
+      abrirWhatsApp();
+      return;
+    }
+
     setEnviando(true);
     setError(null);
 
@@ -82,13 +104,12 @@ export function SelectorPlantilla({ prospectos, onClose }: Props) {
       fetch(`/api/plantillas/${seleccionada.id}`, { method: "PATCH" });
 
       if (esMasivo) {
-        // Envío masivo
         const res = await fetch("/api/campanas/enviar-masivo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             canal: seleccionada.canal,
-            mensaje: seleccionada.contenido, // plantilla con variables sin reemplazar
+            mensaje: seleccionada.contenido,
             asunto: asuntoEditado,
             prospectos,
           }),
@@ -100,7 +121,6 @@ export function SelectorPlantilla({ prospectos, onClose }: Props) {
           prev.map((p) => (p.id === seleccionada.id ? { ...p, usosCount: p.usosCount + 1 } : p))
         );
       } else {
-        // Envío individual
         const res = await fetch("/api/mensajes/enviar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -314,18 +334,37 @@ export function SelectorPlantilla({ prospectos, onClose }: Props) {
                     </div>
                   </div>
                 ) : (
-                  <button
-                    onClick={enviar}
-                    disabled={enviando}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition-all text-sm"
-                  >
-                    {enviando ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                    {enviando
-                      ? "Enviando..."
-                      : esMasivo
-                      ? `Enviar a ${prospectos.filter((p) => seleccionada.canal === "EMAIL" ? !!p.email : !!p.telefono).length} prospectos`
-                      : "Enviar ahora"}
-                  </button>
+                  {(() => {
+                    const esWA = !esMasivo && seleccionada.canal === "WHATSAPP";
+                    return (
+                      <button
+                        onClick={enviar}
+                        disabled={enviando || (esWA && !prospecto?.telefono)}
+                        className={`w-full flex items-center justify-center gap-2 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition-all text-sm ${
+                          esWA
+                            ? "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400"
+                            : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400"
+                        }`}
+                      >
+                        {enviando ? (
+                          <Loader2 size={15} className="animate-spin" />
+                        ) : esWA ? (
+                          <span className="text-base leading-none">💬</span>
+                        ) : (
+                          <Send size={15} />
+                        )}
+                        {enviando
+                          ? "Abriendo..."
+                          : esWA
+                          ? prospecto?.telefono
+                            ? `Abrir WhatsApp · ${prospecto.telefono}`
+                            : "Sin teléfono"
+                          : esMasivo
+                          ? `Enviar a ${prospectos.filter((p) => seleccionada.canal === "EMAIL" ? !!p.email : !!p.telefono).length} prospectos`
+                          : "Enviar ahora"}
+                      </button>
+                    );
+                  })()}
                 )}
 
                 {error && (
