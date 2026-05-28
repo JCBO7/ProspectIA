@@ -2,20 +2,15 @@
  * Motor de búsqueda unificado — agrega OSM + DENUE + Google Places + Hunter.io
  * Siempre devuelve datos reales, sin mocks.
  */
-import { interpretarBusquedaCompleta } from "@/lib/claude/client";
 import { buscarEnOSM, ESTADO_CENTROS, OSM_TAGS_COMUNES } from "@/lib/sources/osm";
 import { buscarPorEstado, mapEstratoATamano, ESTADOS_MEXICO } from "@/lib/denue/client";
 import { buscarEnGooglePlaces } from "@/lib/sources/google-places";
 import { buscarEmailsHunter } from "@/lib/sources/hunter";
-import { scorearProspecto } from "@/lib/claude/client";
 import { geocodificarMunicipio } from "@/lib/sources/nominatim";
 import { clasificarVendedor, filtrarCompetidores } from "@/lib/prospect-matrix";
 import { buscarEnDatosGob } from "@/lib/sources/datos-gob";
 import { buscarEnSIEM } from "@/lib/sources/siem";
 import type { ProspectoData } from "@/types";
-
-// Solo scorear los primeros N resultados con Claude (Opción A)
-const MAX_SCORE_IA = 5;
 
 export interface SearchParams {
   descripcionNegocio: string;
@@ -56,33 +51,20 @@ export async function buscarProspectos(params: SearchParams): Promise<SearchResu
   const perfilVendedor = clasificarVendedor(descripcionNegocio);
   debugInfo.matrizMatch = !!perfilVendedor;
 
-  // ─── 1. Claude interpreta la búsqueda ────────────────────────────────────
+  // ─── 1. Interpretar búsqueda con matriz determinista ─────────────────────
   let girosInterpretados: string[] = [];
   let palabrasClave: string[] = [];
   let osmTags: Array<{ key: string; value: string }> = [];
 
-  // Si la matriz determinista reconoció el servicio, usa sus tags directamente
   if (perfilVendedor) {
     osmTags = perfilVendedor.osmTags;
     palabrasClave = perfilVendedor.denueSectores;
     girosInterpretados = perfilVendedor.tiposCliente;
     debugInfo.matrizUsada = true;
-    // Intenta enriquecer con Claude en paralelo (sin bloquear si falla)
-    interpretarBusquedaCompleta(descripcionNegocio)
-      .then((interp) => { debugInfo.claudeEnriquecio = true; void interp; })
-      .catch(() => { debugInfo.claudeEnriquecioError = true; });
   } else {
-    try {
-      const interp = await interpretarBusquedaCompleta(descripcionNegocio);
-      girosInterpretados = interp.girosScian;
-      palabrasClave = interp.palabrasClave;
-      osmTags = interp.osmTags.length ? interp.osmTags : inferirTagsOSM(descripcionNegocio);
-      debugInfo.claudeOk = true;
-    } catch (e) {
-      palabrasClave = [descripcionNegocio];
-      osmTags = inferirTagsOSM(descripcionNegocio);
-      debugInfo.claudeError = e instanceof Error ? e.message : String(e);
-    }
+    palabrasClave = [descripcionNegocio];
+    osmTags = inferirTagsOSM(descripcionNegocio);
+    debugInfo.matrizUsada = false;
   }
 
   // ─── 2. Geocodificar municipio si no es CDMX ─────────────────────────────
@@ -248,42 +230,10 @@ export async function buscarProspectos(params: SearchParams): Promise<SearchResu
     })
   );
 
-  // ─── 6. Scorear con Claude SOLO los primeros MAX_SCORE_IA ─────────────────
-  const [paraScore, sinScore] = [
-    enriquecidos.slice(0, MAX_SCORE_IA),
-    enriquecidos.slice(MAX_SCORE_IA),
-  ];
-
-  const scored = await Promise.all(
-    paraScore.map(async (p) => {
-      try {
-        const { score, razonamiento } = await scorearProspecto(
-          {
-            empresa: p.empresa,
-            giro: p.giro,
-            tamano: p.tamano,
-            zona: p.zona,
-            telefono: p.telefono,
-            email: p.email,
-            website: p.website,
-          },
-          descripcionNegocio
-        );
-        return {
-          ...p,
-          score,
-          metadata: { ...(p.metadata as object), razonamientoScore: razonamiento },
-        };
-      } catch {
-        return { ...p, score: scoreCompletitud(p) };
-      }
-    })
-  );
-
-  // El resto recibe score basado en completitud de datos (no flat 50)
-  const rest = sinScore.map((p) => ({ ...p, score: p.score || scoreCompletitud(p) }));
-  const conScore = [...scored, ...rest]
-    .filter((p) => (p.score ?? 0) >= 15) // eliminar resultados claramente irrelevantes
+  // ─── 6. Scorear por completitud de datos ─────────────────────────────────
+  const conScore = enriquecidos
+    .map((p) => ({ ...p, score: p.score || scoreCompletitud(p) }))
+    .filter((p) => (p.score ?? 0) >= 15)
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
   return {

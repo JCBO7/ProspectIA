@@ -4,12 +4,6 @@ import { prisma } from "@/lib/prisma/client";
 
 export async function POST(req: Request) {
   try {
-    const dbUrl = process.env.DATABASE_URL ?? "";
-    const firstCharCode = dbUrl.charCodeAt(0);
-    if (firstCharCode === 0xFEFF || firstCharCode === 65279) {
-      return NextResponse.json({ error: `BOM detectado: primer char=${firstCharCode}, url_start=${dbUrl.substring(0, 15)}` }, { status: 500 });
-    }
-
     const { name, email, password } = await req.json();
 
     if (!email || !password || password.length < 8) {
@@ -38,7 +32,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     console.error("Error en registro:", error);
-    const msg = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "Error interno al crear cuenta" }, { status: 500 });
   }
 }
